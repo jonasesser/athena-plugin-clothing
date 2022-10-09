@@ -18,7 +18,7 @@ cd src/core/plugins
 **SSH**
 
 ```
-git@github.com:Stuyk/athena-plugin-clothing.git
+git clone git@github.com:Stuyk/athena-plugin-clothing.git
 ```
 
 **HTTPS**
