@@ -1,19 +1,13 @@
 import * as alt from 'alt-server';
-import { Athena } from '../../../../server/api/athena';
-import { PolygonShape } from '../../../../server/extensions/extColshape';
-import { ServerBlipController } from '../../../../server/systems/blip';
-import { InteractionController } from '../../../../server/systems/interaction';
-import { sha256 } from '../../../../server/utility/encryption';
-import { CurrencyTypes } from '../../../../shared/enums/currency';
-import { ITEM_TYPE } from '../../../../shared/enums/itemTypes';
-import { Blip } from '../../../../shared/interfaces/blip';
-import { ClothingComponent } from '../../../../shared/interfaces/clothing';
-import { Interaction } from '../../../../shared/interfaces/interaction';
-import { Item } from '../../../../shared/interfaces/item';
-import { Vector3 } from '../../../../shared/interfaces/vector';
-import { LOCALE_KEYS } from '../../../../shared/locale/languages/keys';
-import { LocaleController } from '../../../../shared/locale/locale';
-import { deepCloneObject } from '../../../../shared/utility/deepCopy';
+import { Athena } from '@AthenaServer/api/athena';
+import { PolygonShape } from '@AthenaServer/extensions/extColshape';
+import { ITEM_TYPE } from '@AthenaShared/enums/itemTypes';
+import { Blip } from '@AthenaShared/interfaces/blip';
+import { ClothingComponent } from '@AthenaShared/interfaces/clothing';
+import { Interaction } from '@AthenaShared/interfaces/interaction';
+import { Item } from '@AthenaShared/interfaces/item';
+import { LOCALE_KEYS } from '@AthenaShared/locale/languages/keys';
+import { LocaleController } from '@AthenaShared/locale/locale';
 import { CLOTHING_CONFIG } from '../../shared/config';
 import { CLOTHING_STORE_PAGE, DLC_CLOTH_HASH } from '../../shared/enums';
 import { CLOTHING_INTERACTIONS } from '../../shared/events';
@@ -106,14 +100,14 @@ export class ClothingFunctions {
                 polygon.isPlayerOnly = true;
             }
 
-            const clothingData = deepCloneObject<IClothingStore>(DefaultClothingData);
+            const clothingData = Athena.utility.deepCloneObject<IClothingStore>(DefaultClothingData);
             clothingData.uid = uid;
 
             ClothingFunctions.create(
                 position,
                 clothingData,
-                deepCloneObject(defaultBlip),
-                deepCloneObject(defaultInteraction),
+                Athena.utility.deepCloneObject(defaultBlip),
+                Athena.utility.deepCloneObject(defaultInteraction),
             );
         }
 
@@ -126,9 +120,9 @@ export class ClothingFunctions {
      * @param {IClothingStore} store
      * @memberof ClothingFunctions
      */
-    static create(position: Vector3, store: IClothingStore, blip: Blip, interaction: Interaction) {
+    static create(position: alt.IVector3, store: IClothingStore, blip: Blip, interaction: Interaction) {
         if (!store.uid) {
-            store.uid = sha256(JSON.stringify(store));
+            store.uid = Athena.utility.hash.sha256(JSON.stringify(store));
         }
 
         blip.uid = store.uid;
@@ -144,8 +138,8 @@ export class ClothingFunctions {
             alt.emitClient(player, CLOTHING_INTERACTIONS.OPEN, data, player.data.appearance, player.data.equipment);
         };
 
-        ServerBlipController.append(blip);
-        InteractionController.add(interaction);
+        Athena.controllers.blip.append(blip);
+        Athena.controllers.interaction.add(interaction);
         clothingStoreList.push(store);
     }
 
@@ -390,7 +384,7 @@ export class ClothingFunctions {
         // Remove unncessary information
         delete component.internalID;
 
-        const newItem = deepCloneObject<Item<ClothingComponent>>(wearableRef);
+        const newItem = Athena.utility.deepCloneObject<Item<ClothingComponent>>(wearableRef);
         newItem.name = name;
         newItem.description = desc;
         newItem.data = { ...component };

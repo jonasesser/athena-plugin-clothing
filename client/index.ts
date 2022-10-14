@@ -1,15 +1,15 @@
 import * as alt from 'alt-client';
 import * as native from 'natives';
-import { WebViewController } from '../../../client/extensions/view2';
-import ViewModel from '../../../client/models/viewModel';
-import PedEditCamera from '../../../client/utility/camera';
-import { PedCharacter } from '../../../client/utility/characterPed';
-import { isAnyMenuOpen } from '../../../client/utility/menus';
-import { sleep } from '../../../client/utility/sleep';
-import { SYSTEM_EVENTS } from '../../../shared/enums/system';
-import { Appearance } from '../../../shared/interfaces/appearance';
-import { ClothingComponent } from '../../../shared/interfaces/clothing';
-import { Item } from '../../../shared/interfaces/item';
+import { WebViewController } from '@AthenaClient/extensions/view2';
+import ViewModel from '@AthenaClient/models/viewModel';
+import PedEditCamera from '@AthenaClient/utility/camera';
+import { PedCharacter } from '@AthenaClient/utility/characterPed';
+import { isAnyMenuOpen } from '@AthenaClient/utility/menus';
+import { sleep } from '@AthenaClient/utility/sleep';
+import { SYSTEM_EVENTS } from '@AthenaShared/enums/system';
+import { Appearance } from '@AthenaShared/interfaces/appearance';
+import { ClothingComponent } from '@AthenaShared/interfaces/clothing';
+import { Item } from '@AthenaShared/interfaces/item';
 import { CLOTHING_CONFIG } from '../shared/config';
 import { CLOTHING_INTERACTIONS } from '../shared/events';
 import { CLOTHING_DLC_INFO, IClothingStore } from '../shared/interfaces';
@@ -385,5 +385,5 @@ class InternalFunctions implements ViewModel {
     }
 }
 
-alt.on(SYSTEM_EVENTS.META_CHANGED, InternalFunctions.handleMetaChanged);
+alt.on('localMetaChange', InternalFunctions.handleMetaChanged);
 alt.onServer(CLOTHING_INTERACTIONS.OPEN, InternalFunctions.open);
