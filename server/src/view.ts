@@ -108,6 +108,7 @@ export class ClothingFunctions {
                 clothingData,
                 Athena.utility.deepCloneObject(defaultBlip),
                 Athena.utility.deepCloneObject(defaultInteraction),
+                clothingStores[i].isBlip,
             );
         }
 
@@ -120,7 +121,13 @@ export class ClothingFunctions {
      * @param {IClothingStore} store
      * @memberof ClothingFunctions
      */
-    static create(position: alt.IVector3, store: IClothingStore, blip: Blip, interaction: Interaction) {
+    static create(
+        position: alt.IVector3,
+        store: IClothingStore,
+        blip: Blip,
+        interaction: Interaction,
+        createBlip: boolean,
+    ) {
         if (!store.uid) {
             store.uid = Athena.utility.hash.sha256(JSON.stringify(store));
         }
@@ -138,7 +145,9 @@ export class ClothingFunctions {
             alt.emitClient(player, CLOTHING_INTERACTIONS.OPEN, data, player.data.appearance, player.data.equipment);
         };
 
-        Athena.controllers.blip.append(blip);
+        if (createBlip) {
+            Athena.controllers.blip.append(blip);
+        }
         Athena.controllers.interaction.add(interaction);
         clothingStoreList.push(store);
     }
