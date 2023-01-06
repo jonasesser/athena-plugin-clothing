@@ -8,27 +8,27 @@ export const CLOTHING_CONFIG: IClothingConfig = {
     MAXIMUM_COMPONENT_VALUES: {
         // Female
         [ORIENTATION.FEMALE]: {
-            [CLOTHING_IDS.MASKS]: 208, // Masks
-            [CLOTHING_IDS.TORSOS]: 242, // Torsos
-            [CLOTHING_IDS.LEGS]: 155, // Legs
-            [CLOTHING_IDS.BAGS]: 110, // Bags
-            [CLOTHING_IDS.SHOES]: 112, // Shoes
-            [CLOTHING_IDS.ACCESSORIES]: 122, // Accessories
-            [CLOTHING_IDS.UNDERSHIRTS]: 235, // Undershirts
-            [CLOTHING_IDS.BODY_ARMOUR]: 33, // body armour
-            [CLOTHING_IDS.TOP]: 439, // Tops / Shirts
+            [CLOTHING_IDS.MASKS]: 215, // Masks (01/2023)
+            [CLOTHING_IDS.TORSOS]: 243, // Torsos (01/2023)
+            [CLOTHING_IDS.LEGS]: 168, // Legs (01/2023)
+            [CLOTHING_IDS.BAGS]: 110, // Bags (01/2023)
+            [CLOTHING_IDS.SHOES]: 129, // Shoes (01/2023)
+            [CLOTHING_IDS.ACCESSORIES]: 122, // Accessories (01/2023)
+            [CLOTHING_IDS.UNDERSHIRTS]: 237, // Undershirts (01/2023)
+            [CLOTHING_IDS.BODY_ARMOUR]: 33, // body armour (01/2023)
+            [CLOTHING_IDS.TOP]: 472, // Tops / Shirts (01/2023)
         },
         // Male
         [ORIENTATION.MALE]: {
-            [CLOTHING_IDS.MASKS]: 208, // Masks
-            [CLOTHING_IDS.TORSOS]: 197, // Torsos
-            [CLOTHING_IDS.LEGS]: 147, // Legs
-            [CLOTHING_IDS.BAGS]: 110, // Bags
-            [CLOTHING_IDS.SHOES]: 108, // Shoes
-            [CLOTHING_IDS.ACCESSORIES]: 153, // Accessories
-            [CLOTHING_IDS.UNDERSHIRTS]: 190, // Undershirts
-            [CLOTHING_IDS.BODY_ARMOUR]: 28, // body armour
-            [CLOTHING_IDS.TOP]: 412, // Tops / Shirts
+            [CLOTHING_IDS.MASKS]: 215, // Masks (01/2023)
+            [CLOTHING_IDS.TORSOS]: 209, // Torsos (01/2023)
+            [CLOTHING_IDS.LEGS]: 159, // Legs (01/2023)
+            [CLOTHING_IDS.BAGS]: 110, // Bags (01/2023)
+            [CLOTHING_IDS.SHOES]: 125, // Shoes (01/2023)
+            [CLOTHING_IDS.ACCESSORIES]: 153, // Accessories (01/2023)
+            [CLOTHING_IDS.UNDERSHIRTS]: 192, // Undershirts (01/2023)
+            [CLOTHING_IDS.BODY_ARMOUR]: 28, // body armour (01/2023)
+            [CLOTHING_IDS.TOP]: 441, // Tops / Shirts (01/2023)
         },
     },
     /**
