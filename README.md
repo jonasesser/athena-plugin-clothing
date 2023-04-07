@@ -1,6 +1,6 @@
 # Athena Plugin - Clothing
 
-A simple clothing plugin for the Athena Framework compatible with `4.0.0` of the [Athena Framework](https://athenaframework.com/).
+A simple clothing plugin for the Athena Framework compatible with `3.9.0` of the [Athena Framework](https://athenaframework.com/).
 
 Allows players to visit a shop and purchase clothing. That's about it.
 
@@ -18,12 +18,12 @@ cd src/core/plugins
 **SSH**
 
 ```
-git clone git@github.com:Athena-Roleplay-Framework/athena-plugin-clothing.git
+git clone git@github.com:Stuyk/athena-plugin-clothing.git
 ```
 
 **HTTPS**
 ```
-git clone https://github.com/Athena-Roleplay-Framework/athena-plugin-clothing
+git clone https://github.com/Stuyk/athena-plugin-clothing
 ```
 
 4. Start the Server

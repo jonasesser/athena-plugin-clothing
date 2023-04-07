@@ -1,19 +1,20 @@
 import * as alt from 'alt-server';
-import { Athena } from '@AthenaServer/api/athena';
-import { PolygonShape } from '@AthenaServer/extensions/extColshape';
-import { ITEM_TYPE } from '@AthenaShared/enums/itemTypes';
-import { Blip } from '@AthenaShared/interfaces/blip';
-import { ClothingComponent } from '@AthenaShared/interfaces/clothing';
-import { Interaction } from '@AthenaShared/interfaces/interaction';
-import { Item } from '@AthenaShared/interfaces/item';
-import { LOCALE_KEYS } from '@AthenaShared/locale/languages/keys';
-import { LocaleController } from '@AthenaShared/locale/locale';
+import * as Athena from '@AthenaServer/api';
+import { Interaction } from '../../../../shared/interfaces/interaction';
+import { ClothingComponent, Item } from '../../../../shared/interfaces/item';
+import { LOCALE_KEYS } from '../../../../shared/locale/languages/keys';
+import { LocaleController } from '../../../../shared/locale/locale';
+import { deepCloneObject } from '../../../../shared/utility/deepCopy';
 import { CLOTHING_CONFIG } from '../../shared/config';
 import { CLOTHING_STORE_PAGE, DLC_CLOTH_HASH } from '../../shared/enums';
 import { CLOTHING_INTERACTIONS } from '../../shared/events';
 import { CLOTHING_DLC_INFO, IClothingStore } from '../../shared/interfaces';
 import { ComponentVueInfo } from '../../shared/types';
 import clothingStores from './stores';
+import { PolygonShape } from '@AthenaServer/extensions/extColshape';
+import { sha256 } from '@AthenaServer/utility/hash';
+import { Blip } from '@AthenaShared/interfaces/blip';
+import { ClothingInfo } from '@AthenaShared/utility/clothing';
 
 // Do not change order
 const icons = [
@@ -37,7 +38,7 @@ const wearableRef: Item = {
     icon: 'crate',
     slot: 0,
     quantity: 1,
-    behavior: ITEM_TYPE.CAN_DROP | ITEM_TYPE.CAN_TRADE | ITEM_TYPE.IS_EQUIPMENT,
+    behavior: { canDrop: true, canTrade: true, isEquippable: true },
     data: {},
 };
 
@@ -72,7 +73,7 @@ export class ClothingFunctions {
      */
     static init() {
         for (let i = 0; i < clothingStores.length; i++) {
-            const position = clothingStores[i];
+            const position = new alt.Vector3(clothingStores[i].x, clothingStores[i].y, clothingStores[i].z);
             const uid = `clothing-store-${i}`;
 
             // Do not change.
@@ -100,15 +101,14 @@ export class ClothingFunctions {
                 polygon.isPlayerOnly = true;
             }
 
-            const clothingData = Athena.utility.deepCloneObject<IClothingStore>(DefaultClothingData);
+            const clothingData = deepCloneObject<IClothingStore>(DefaultClothingData);
             clothingData.uid = uid;
 
             ClothingFunctions.create(
                 position,
                 clothingData,
-                Athena.utility.deepCloneObject(defaultBlip),
-                Athena.utility.deepCloneObject(defaultInteraction),
-                clothingStores[i].isBlip,
+                deepCloneObject(defaultBlip),
+                deepCloneObject(defaultInteraction),
             );
         }
 
@@ -121,15 +121,9 @@ export class ClothingFunctions {
      * @param {IClothingStore} store
      * @memberof ClothingFunctions
      */
-    static create(
-        position: alt.IVector3,
-        store: IClothingStore,
-        blip: Blip,
-        interaction: Interaction,
-        createBlip: boolean,
-    ) {
+    static create(position: alt.Vector3, store: IClothingStore, blip: Blip, interaction: Interaction) {
         if (!store.uid) {
-            store.uid = Athena.utility.hash.sha256(JSON.stringify(store));
+            store.uid = sha256(JSON.stringify(store));
         }
 
         blip.uid = store.uid;
@@ -140,15 +134,17 @@ export class ClothingFunctions {
             z: position.z - 1,
         };
         interaction.isPlayerOnly = true;
+
         interaction.callback = (player: alt.Player) => {
+            const playerData = Athena.document.character.get(player);
+            if (!playerData) return;
+
             const data = ClothingFunctions.getClothingStoreData(store.uid);
-            alt.emitClient(player, CLOTHING_INTERACTIONS.OPEN, data, player.data.appearance, player.data.equipment);
+            alt.emitClient(player, CLOTHING_INTERACTIONS.OPEN, data, playerData.appearance, playerData.equipment);
         };
 
-        if (createBlip) {
-            Athena.controllers.blip.append(blip);
-        }
-        Athena.controllers.interaction.add(interaction);
+        Athena.controllers.blip.append(blip);
+        Athena.controllers.interaction.append(interaction);
         clothingStoreList.push(store);
     }
 
@@ -217,7 +213,8 @@ export class ClothingFunctions {
      * @memberof ClothingFunctions
      */
     static exit(player: alt.Player) {
-        Athena.player.sync.inventory(player);
+        //TODO: sync still needed?
+        // Athena.player.sync.inventory(player);
     }
 
     /**
@@ -242,10 +239,15 @@ export class ClothingFunctions {
             return null;
         }
 
-        const defaultMaxSize = isProp
-            ? CLOTHING_CONFIG.MAXIMUM_PROP_VALUES[player.data.appearance.sex][id]
-            : CLOTHING_CONFIG.MAXIMUM_COMPONENT_VALUES[player.data.appearance.sex][id];
+        const playerData = Athena.document.character.get(player);
+        if (!playerData) return null;
 
+        const defaultMaxSize = isProp
+            ? CLOTHING_CONFIG.MAXIMUM_PROP_VALUES[playerData.appearance.sex][id]
+            : CLOTHING_CONFIG.MAXIMUM_COMPONENT_VALUES[playerData.appearance.sex][id];
+
+        alt.log('defaultMaxSize: ' + defaultMaxSize);
+        alt.log('drawable: ' + drawable);
         if (drawable <= defaultMaxSize) {
             const dlcData = isProp ? player.getDlcProp(id) : player.getDlcClothes(id);
             return {
@@ -278,12 +280,13 @@ export class ClothingFunctions {
         }
 
         for (const info of dataSet) {
-            for (let drawableIndex = 0; drawableIndex < info.count[player.data.appearance.sex]; drawableIndex++) {
+            for (let drawableIndex = 0; drawableIndex < info.count[playerData.appearance.sex]; drawableIndex++) {
                 currentSize += 1;
 
                 if (currentSize === drawable) {
+                    alt.log('DLC INIT WHAT EVER!!!!!!!: ' + info.dlcName);
                     return {
-                        dlcName: DLC_CLOTH_HASH[player.data.appearance.sex] + info.dlcName,
+                        dlcName: DLC_CLOTH_HASH[playerData.appearance.sex] + info.dlcName,
                         drawable: drawableIndex,
                         texture,
                     };
@@ -343,7 +346,7 @@ export class ClothingFunctions {
         player: alt.Player,
         shopUID: string,
         equipmentSlot: number,
-        component: ClothingComponent,
+        clothing: ClothingInfo,
         name: string,
         desc: string,
         noSound = false,
@@ -354,12 +357,21 @@ export class ClothingFunctions {
             return false;
         }
 
+        const playerData = Athena.document.character.get(player);
+        if (!playerData) return false;
+
         const shop = clothingStoreList[index];
-        const id: number = component.internalID;
+        
+        //TODO what is internalID?
+        // const id: number = component.internalID;
+        // const id: number = component.id;
+        const components = clothing.components;
 
         let totalCost: number = 0;
-        for (let i = 0; i < component.drawables.length; i++) {
-            const drawable: number = component.drawables[i];
+        for (let i = 0; i < components.length; i++) {
+            const component = components[i];
+            const drawable: number = component.drawable;
+            const id: number = component.id;
 
             // Price based on component id in individual shop.
             if (shop.clothingPrices[id]) {
@@ -384,82 +396,84 @@ export class ClothingFunctions {
         }
 
         if (totalCost >= 1) {
-            if (player.data.cash + player.data.bank < totalCost) {
+            if (playerData.cash + playerData.bank < totalCost) {
                 Athena.player.emit.sound2D(player, 'item_error');
                 return false;
             }
         }
 
-        // Remove unncessary information
-        delete component.internalID;
+        // TODO Remove unncessary information
+        // delete component.internalID;
 
-        const newItem = Athena.utility.deepCloneObject<Item<ClothingComponent>>(wearableRef);
+        const newItem = deepCloneObject<Item<ClothingComponent>>(wearableRef);
         newItem.name = name;
         newItem.description = desc;
-        newItem.data = { ...component };
-        newItem.data.sex = player.data.appearance.sex;
-        newItem.data.dlcHashes = [];
+
+        //TODO: this is a hack, fix it
+        // newItem.data = { ...component };
+        // newItem.data.sex = playerData.appearance.sex;
+        // newItem.data.dlcHashes = [];
         newItem.slot = equipmentSlot;
         newItem.icon = icons[equipmentSlot];
         newItem.quantity = 1;
-        newItem.equipment = equipmentSlot;
+        // newItem.equipment = equipmentSlot;
 
-        Athena.player.sync.singleEquipment(player, newItem.data as ClothingComponent);
+        // Athena.player.sync.singleEquipment(player, newItem.data as ClothingComponent);
 
         await alt.Utils.wait(500);
 
-        for (let i = 0; i < component.drawables.length; i++) {
-            const dlcInfo = ClothingFunctions.getDlcHash(
-                player,
-                component.ids[i],
-                component.drawables[i],
-                component.textures[i],
-                component.isProp,
-            );
+        // for (let i = 0; i < component.drawables.length; i++) {
+        //     const dlcInfo = ClothingFunctions.getDlcHash(
+        //         player,
+        //         component.ids[i],
+        //         component.drawables[i],
+        //         component.textures[i],
+        //         component.isProp,
+        //     );
 
-            newItem.data.dlcHashes.push(dlcInfo.dlcName);
-            newItem.data.drawables[i] = dlcInfo.drawable;
-            newItem.data.textures[i] = dlcInfo.texture;
-        }
+        //     newItem.data.dlcHashes.push(dlcInfo.dlcName);
+        //     newItem.data.drawables[i] = dlcInfo.drawable;
+        //     newItem.data.textures[i] = dlcInfo.texture;
+        // }
 
-        let didGetAdded = false;
+        // let didGetAdded = false;
 
-        if (Athena.player.inventory.isEquipmentSlotFree(player, equipmentSlot)) {
-            didGetAdded = Athena.player.inventory.equipmentAdd(player, newItem, equipmentSlot);
-        } else {
-            const openSlot = Athena.player.inventory.getFreeInventorySlot(player);
-            if (!openSlot) {
-                Athena.player.emit.sound2D(player, 'item_error');
-                return false;
-            }
+        // if (Athena.player.inventory.isEquipmentSlotFree(player, equipmentSlot)) {
+        //     didGetAdded = Athena.player.inventory.equipmentAdd(player, newItem, equipmentSlot);
+        // } else {
+        //     const openSlot = Athena.player.inventory.getFreeInventorySlot(player);
+        //     if (!openSlot) {
+        //         Athena.player.emit.sound2D(player, 'item_error');
+        //         return false;
+        //     }
 
-            Athena.player.emit.message(player, LocaleController.get(LOCALE_KEYS.CLOTHING_ITEM_IN_INVENTORY));
-            didGetAdded = Athena.player.inventory.inventoryAdd(player, newItem, openSlot.slot);
-        }
+        //     Athena.player.emit.message(player, LocaleController.get(LOCALE_KEYS.CLOTHING_ITEM_IN_INVENTORY));
+        //     didGetAdded = Athena.player.inventory.inventoryAdd(player, newItem, openSlot.slot);
+        // }
 
-        if (!didGetAdded) {
-            Athena.player.emit.sound2D(player, 'item_error');
-            return false;
-        }
+        // if (!didGetAdded) {
+        //     Athena.player.emit.sound2D(player, 'item_error');
+        //     return false;
+        // }
 
-        if (totalCost >= 1) {
-            if (!Athena.player.currency.subAllCurrencies(player, totalCost)) {
-                Athena.player.emit.sound2D(player, 'item_error');
-                return false;
-            }
-        }
+        // if (totalCost >= 1) {
+        //     if (!Athena.player.currency.subAllCurrencies(player, totalCost)) {
+        //         Athena.player.emit.sound2D(player, 'item_error');
+        //         return false;
+        //     }
+        // }
 
-        await Athena.state.setBulk(
-            player,
-            { inventory: player.data.inventory, equipment: player.data.equipment },
-            true,
-        );
-        Athena.player.sync.inventory(player);
-        Athena.player.sync.equipment(player, player.data.equipment as Item[], player.data.appearance.sex === 1);
+        // await Athena.state.setBulk(
+        //     player,
+        //     { inventory: player.data.inventory, equipment: player.data.equipment },
+        //     true,
+        // );
+        // Athena.player.sync.inventory(player);
+        // Athena.player.sync.equipment(player, player.data.equipment as Item[], player.data.appearance.sex === 1);
 
-        if (!noSound) {
-            Athena.player.emit.sound2D(player, 'item_purchase');
-        }
+        // if (!noSound) {
+        //     Athena.player.emit.sound2D(player, 'item_purchase');
+        // }
 
         return true;
     }

@@ -7,18 +7,6 @@ export const CLOTHING_CONFIG: IClothingConfig = {
      */
     MAXIMUM_COMPONENT_VALUES: {
         // Female
-        [ORIENTATION.FEMALE]: {
-            [CLOTHING_IDS.MASKS]: 215, // Masks (01/2023)
-            [CLOTHING_IDS.TORSOS]: 243, // Torsos (01/2023)
-            [CLOTHING_IDS.LEGS]: 168, // Legs (01/2023)
-            [CLOTHING_IDS.BAGS]: 110, // Bags (01/2023)
-            [CLOTHING_IDS.SHOES]: 129, // Shoes (01/2023)
-            [CLOTHING_IDS.ACCESSORIES]: 122, // Accessories (01/2023)
-            [CLOTHING_IDS.UNDERSHIRTS]: 237, // Undershirts (01/2023)
-            [CLOTHING_IDS.BODY_ARMOUR]: 33, // body armour (01/2023)
-            [CLOTHING_IDS.TOP]: 472, // Tops / Shirts (01/2023)
-        },
-        // Male
         [ORIENTATION.MALE]: {
             [CLOTHING_IDS.MASKS]: 215, // Masks (01/2023)
             [CLOTHING_IDS.TORSOS]: 209, // Torsos (01/2023)
@@ -29,6 +17,18 @@ export const CLOTHING_CONFIG: IClothingConfig = {
             [CLOTHING_IDS.UNDERSHIRTS]: 192, // Undershirts (01/2023)
             [CLOTHING_IDS.BODY_ARMOUR]: 28, // body armour (01/2023)
             [CLOTHING_IDS.TOP]: 441, // Tops / Shirts (01/2023)
+        },
+        // Male
+        [ORIENTATION.FEMALE]: {
+            [CLOTHING_IDS.MASKS]: 215, // Masks (01/2023)
+            [CLOTHING_IDS.TORSOS]: 243, // Torsos (01/2023)
+            [CLOTHING_IDS.LEGS]: 168, // Legs (01/2023)
+            [CLOTHING_IDS.BAGS]: 110, // Bags (01/2023)
+            [CLOTHING_IDS.SHOES]: 129, // Shoes (01/2023)
+            [CLOTHING_IDS.ACCESSORIES]: 122, // Accessories (01/2023)
+            [CLOTHING_IDS.UNDERSHIRTS]: 237, // Undershirts (01/2023)
+            [CLOTHING_IDS.BODY_ARMOUR]: 33, // body armour (01/2023)
+            [CLOTHING_IDS.TOP]: 472, // Tops / Shirts (01/2023)
         },
     },
     /**
@@ -72,12 +72,15 @@ export const CLOTHING_CONFIG: IClothingConfig = {
         ],
         [CLOTHING_IDS.TORSOS]: [],
         [CLOTHING_IDS.LEGS]: [],
-        [CLOTHING_IDS.BAGS]: [],
+        [CLOTHING_IDS.BAGS]: [{ dlcName: 'rucksack', count: { [ORIENTATION.FEMALE]: 0, [ORIENTATION.MALE]: 3 } }],
         [CLOTHING_IDS.SHOES]: [],
         [CLOTHING_IDS.ACCESSORIES]: [],
         [CLOTHING_IDS.UNDERSHIRTS]: [],
         [CLOTHING_IDS.BODY_ARMOUR]: [],
-        [CLOTHING_IDS.TOP]: [],
+        [CLOTHING_IDS.TOP]: [
+            { dlcName: 'gpfemale', count: { [ORIENTATION.FEMALE]: 1, [ORIENTATION.MALE]: 0 } },
+            { dlcName: 'addon_clothing_u', count: { [ORIENTATION.FEMALE]: 7, [ORIENTATION.MALE]: 7 } },
+        ],
     },
     DLC_PROPS: {
         [PROP_IDS.HATS]: [],

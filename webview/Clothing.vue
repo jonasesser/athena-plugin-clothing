@@ -130,6 +130,8 @@
 </template>
 
 <script lang="ts">
+import WebViewEvents from '@ViewUtility/webViewEvents';
+import { CLOTHING_INTERACTIONS } from '../shared/events';
 import { defineComponent, defineAsyncComponent } from 'vue';
 import { EXAMPLE_CLOTHING_DATA } from './utility/exampleData';
 import { DEFAULT_CLOTHING_STORE } from './utility/defaultData';
@@ -236,7 +238,7 @@ export default defineComponent({
                 return;
             }
 
-            alt.emit(`${ComponentName}:Populate`, JSON.stringify(this.pages));
+            alt.emit(CLOTHING_INTERACTIONS.POPULATE, JSON.stringify(this.pages));
         },
         updateComponent(index: number, dataName: string, value: number, isIncrement = false) {
             const pages = [...this.pages];
@@ -285,7 +287,7 @@ export default defineComponent({
             }
 
             // Determine if we should update the labels / components based on what changed.
-            alt.emit(`${ComponentName}:Update`, JSON.stringify(this.pages), false, shouldPopulate);
+            alt.emit(CLOTHING_INTERACTIONS.UPDATE, JSON.stringify(this.pages), false, shouldPopulate);
         },
         async setPages(pages) {
             this.pages = pages;
@@ -419,7 +421,7 @@ export default defineComponent({
                 return;
             }
 
-            alt.emit(`${ComponentName}:PurchaseAll`, components);
+            alt.emit(CLOTHING_INTERACTIONS.PURCHASE_ALL, components);
         },
         isComponentAvailableAll() {
             let allAvailable = true;
@@ -519,7 +521,7 @@ export default defineComponent({
             this.desc = '';
 
             if ('alt' in window) {
-                alt.emit(`${ComponentName}:DisableControls`, value);
+                alt.emit(CLOTHING_INTERACTIONS.DISABLE_CONTROLS, value);
             }
         },
         getData(dataName: string, index: number) {
@@ -530,7 +532,7 @@ export default defineComponent({
                 return;
             }
 
-            alt.emit(`${ComponentName}:PageUpdate`, this.pageIndex);
+            alt.emit(CLOTHING_INTERACTIONS.PAGE_UPDATE, this.pageIndex);
         },
         handlePress(e) {
             if (e.keyCode !== 27) {
@@ -544,7 +546,7 @@ export default defineComponent({
                 return;
             }
 
-            alt.emit(`${ComponentName}:Close`);
+            alt.emit(CLOTHING_INTERACTIONS.CLOSE);
         },
         purchaseComponent() {
             const componentData = JSON.parse(JSON.stringify(this.pages[this.pageIndex]));
@@ -561,7 +563,7 @@ export default defineComponent({
             }
 
             alt.emit(
-                `${ComponentName}:Purchase`,
+                CLOTHING_INTERACTIONS.PURCHASE,
                 this.storeData.uid,
                 this.pageIndex,
                 componentData,
@@ -598,13 +600,13 @@ export default defineComponent({
         this.setPage(this.pageIndex);
 
         if ('alt' in window) {
-            alt.on(`${ComponentName}:SetData`, this.setData);
-            alt.on(`${ComponentName}:Propagate`, this.setPages);
-            alt.on(`${ComponentName}:SetBankData`, this.setBankData);
-            alt.emit(`${ComponentName}:Ready`);
+            WebViewEvents.on(CLOTHING_INTERACTIONS.SET_DATA, this.setData);
+            WebViewEvents.on(CLOTHING_INTERACTIONS.PROPAGATE, this.setPages);
+            WebViewEvents.on(CLOTHING_INTERACTIONS.SET_BANK_DATA, this.setBankData);
+            WebViewEvents.emitReady(ComponentName);
 
             setTimeout(() => {
-                alt.emit(`${ComponentName}:Populate`, JSON.stringify(this.pages));
+                alt.emit(CLOTHING_INTERACTIONS.POPULATE, JSON.stringify(this.pages));
             }, 200);
         } else {
             this.money = 500000;
@@ -612,12 +614,6 @@ export default defineComponent({
     },
     unmounted() {
         document.removeEventListener('keyup', this.handlePress);
-
-        if ('alt' in window) {
-            alt.off(`${ComponentName}:SetData`, this.setData);
-            alt.off(`${ComponentName}:Propagate`, this.setPages);
-            alt.off(`${ComponentName}:SetBankData`, this.setBankData);
-        }
     },
 });
 </script>
