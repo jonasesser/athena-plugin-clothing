@@ -238,7 +238,7 @@ export default defineComponent({
                 return;
             }
 
-            alt.emit(CLOTHING_INTERACTIONS.POPULATE, JSON.stringify(this.pages));
+            WebViewEvents.emitClient(CLOTHING_INTERACTIONS.POPULATE, JSON.stringify(this.pages));
         },
         updateComponent(index: number, dataName: string, value: number, isIncrement = false) {
             const pages = [...this.pages];
@@ -287,7 +287,7 @@ export default defineComponent({
             }
 
             // Determine if we should update the labels / components based on what changed.
-            alt.emit(CLOTHING_INTERACTIONS.UPDATE, JSON.stringify(this.pages), false, shouldPopulate);
+            WebViewEvents.emitClient(CLOTHING_INTERACTIONS.UPDATE, JSON.stringify(this.pages), false, shouldPopulate);
         },
         async setPages(pages) {
             this.pages = pages;
@@ -421,7 +421,7 @@ export default defineComponent({
                 return;
             }
 
-            alt.emit(CLOTHING_INTERACTIONS.PURCHASE_ALL, components);
+            WebViewEvents.emitClient(CLOTHING_INTERACTIONS.PURCHASE_ALL, components);
         },
         isComponentAvailableAll() {
             let allAvailable = true;
@@ -520,9 +520,8 @@ export default defineComponent({
             this.name = '';
             this.desc = '';
 
-            if ('alt' in window) {
-                alt.emit(CLOTHING_INTERACTIONS.DISABLE_CONTROLS, value);
-            }
+            WebViewEvents.emitClient(CLOTHING_INTERACTIONS.DISABLE_CONTROLS, value);
+        
         },
         getData(dataName: string, index: number) {
             return this.pages[this.pageIndex][dataName][index];
@@ -546,7 +545,7 @@ export default defineComponent({
                 return;
             }
 
-            alt.emit(CLOTHING_INTERACTIONS.CLOSE);
+            WebViewEvents.emitClose();
         },
         purchaseComponent() {
             const componentData = JSON.parse(JSON.stringify(this.pages[this.pageIndex]));
@@ -562,7 +561,7 @@ export default defineComponent({
                 return;
             }
 
-            alt.emit(
+            WebViewEvents.emitClient(
                 CLOTHING_INTERACTIONS.PURCHASE,
                 this.storeData.uid,
                 this.pageIndex,
@@ -606,7 +605,7 @@ export default defineComponent({
             WebViewEvents.emitReady(ComponentName);
 
             setTimeout(() => {
-                alt.emit(CLOTHING_INTERACTIONS.POPULATE, JSON.stringify(this.pages));
+                WebViewEvents.emitClient(CLOTHING_INTERACTIONS.POPULATE, JSON.stringify(this.pages));
             }, 200);
         } else {
             this.money = 500000;
