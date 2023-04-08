@@ -137,6 +137,8 @@ import { EXAMPLE_CLOTHING_DATA } from './utility/exampleData';
 import { DEFAULT_CLOTHING_STORE } from './utility/defaultData';
 import { LOCALE_CLOTHING } from '../shared/locales';
 import { ComponentVueInfo } from '../shared/types';
+import { ClothingInfo, ClothingComponent } from '@AthenaShared/interfaces/item';
+import { IClothingStorePage } from '../shared/interfaces';
 
 const ComponentName = 'Clothing';
 export default defineComponent({
@@ -162,7 +164,7 @@ export default defineComponent({
             pageName: '',
             money: 0,
             page: {},
-            pages: [],
+            pages: [] as Array<IClothingStorePage>,
             // Old dog shit
             showDialog: false,
             name: '',
@@ -289,7 +291,7 @@ export default defineComponent({
             // Determine if we should update the labels / components based on what changed.
             WebViewEvents.emitClient(CLOTHING_INTERACTIONS.UPDATE, JSON.stringify(this.pages), false, shouldPopulate);
         },
-        async setPages(pages) {
+        async setPages(pages: Array<IClothingStorePage>) {
             this.pages = pages;
             this.page = this.pages[this.pageIndex];
         },
@@ -548,13 +550,13 @@ export default defineComponent({
             WebViewEvents.emitClose();
         },
         purchaseComponent() {
-            const componentData = JSON.parse(JSON.stringify(this.pages[this.pageIndex]));
-            delete componentData.startValue;
-            delete componentData.maxDrawables;
-            delete componentData.maxTextures;
-            delete componentData.name;
-            delete componentData.pageName;
-            delete componentData.names;
+            const pageData = JSON.parse(JSON.stringify(this.pages[this.pageIndex]));
+            delete pageData.startValue;
+            delete pageData.maxDrawables;
+            delete pageData.maxTextures;
+            delete pageData.name;
+            delete pageData.pageName;
+            delete pageData.names;
 
             if (!('alt' in window)) {
                 this.togglePurchaseInterface(false);
@@ -565,7 +567,7 @@ export default defineComponent({
                 CLOTHING_INTERACTIONS.PURCHASE,
                 this.storeData.uid,
                 this.pageIndex,
-                componentData,
+                pageData,
                 this.name,
                 this.desc,
             );

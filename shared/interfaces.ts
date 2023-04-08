@@ -1,5 +1,19 @@
 import { CLOTHING_IDS, CLOTHING_STORE_PAGE, ORIENTATION, PROP_IDS } from './enums';
 
+export interface IClothingStorePage {
+    pageName: string,
+    names?: Array<string>,
+    drawables: Array<number>,
+    ids: Array<number>,
+    internalID: number,
+    isProp: boolean,
+    maxDrawables: Array<number>,
+    maxTextures: Array<number>,
+    textures: Array<number>,
+    palettes?: Array<number>,
+    startValue?: number,
+    dlcs?: Array<number>,
+}
 export interface IClothingPrice {
     price: number;
     id: number;

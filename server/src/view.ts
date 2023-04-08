@@ -1,14 +1,14 @@
 import * as alt from 'alt-server';
 import * as Athena from '@AthenaServer/api';
 import { Interaction } from '../../../../shared/interfaces/interaction';
-import { ClothingComponent, Item } from '../../../../shared/interfaces/item';
+import { ClothingComponent, Item, ItemEx } from '../../../../shared/interfaces/item';
 import { LOCALE_KEYS } from '../../../../shared/locale/languages/keys';
 import { LocaleController } from '../../../../shared/locale/locale';
 import { deepCloneObject } from '../../../../shared/utility/deepCopy';
 import { CLOTHING_CONFIG } from '../../shared/config';
 import { CLOTHING_STORE_PAGE, DLC_CLOTH_HASH } from '../../shared/enums';
 import { CLOTHING_INTERACTIONS } from '../../shared/events';
-import { CLOTHING_DLC_INFO, IClothingStore } from '../../shared/interfaces';
+import { CLOTHING_DLC_INFO, IClothingStore, IClothingStorePage } from '../../shared/interfaces';
 import { ComponentVueInfo } from '../../shared/types';
 import clothingStores from './stores';
 import { PolygonShape } from '@AthenaServer/extensions/extColshape';
@@ -346,7 +346,7 @@ export class ClothingFunctions {
         player: alt.Player,
         shopUID: string,
         equipmentSlot: number,
-        clothing: ClothingInfo,
+        page: IClothingStorePage,
         name: string,
         desc: string,
         noSound = false,
@@ -362,13 +362,12 @@ export class ClothingFunctions {
 
         const shop = clothingStoreList[index];
         
-        //TODO what is internalID?
-        // const id: number = component.internalID;
-        // const id: number = component.id;
-        const components = clothing.components;
+        //TODO what is internalID? index of shop page!
+        //const id: number = component.internalID;
+        const id: number = equipmentSlot;
 
         let totalCost: number = 0;
-        for (let i = 0; i < components.length; i++) {
+        for (let i = 0; i < component.length; i++) {
             const component = components[i];
             const drawable: number = component.drawable;
             const id: number = component.id;
@@ -405,19 +404,23 @@ export class ClothingFunctions {
         // TODO Remove unncessary information
         // delete component.internalID;
 
-        const newItem = deepCloneObject<Item<ClothingComponent>>(wearableRef);
+        const newItem = deepCloneObject<ItemEx<ClothingInfo>>(wearableRef);
         newItem.name = name;
         newItem.description = desc;
 
         //TODO: this is a hack, fix it
-        // newItem.data = { ...component };
-        // newItem.data.sex = playerData.appearance.sex;
+        newItem.data = clothing;
+        newItem.data.sex = playerData.appearance.sex;
         // newItem.data.dlcHashes = [];
         newItem.slot = equipmentSlot;
         newItem.icon = icons[equipmentSlot];
         newItem.quantity = 1;
         // newItem.equipment = equipmentSlot;
 
+        // Athena.player.sync.appearance(player, Characters[player.id][index]);
+        // Athena.systems.inventory.clothing.update(player, Characters[player.id][index]);
+                //server side
+        // const storableItem = Athena.systems.inventory.clothing....
         // Athena.player.sync.singleEquipment(player, newItem.data as ClothingComponent);
 
         await alt.Utils.wait(500);

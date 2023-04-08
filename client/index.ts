@@ -5,10 +5,10 @@ import ViewModel from '../../../client/models/viewModel';
 import { PedCharacter } from '../../../client/utility/characterPed';
 import { SYSTEM_EVENTS } from '../../../shared/enums/system';
 import { Appearance } from '../../../shared/interfaces/appearance';
-import { ClothingComponent, Item } from '../../../shared/interfaces/item';
+import { ClothingComponent, Item, ItemEx } from '../../../shared/interfaces/item';
 import { CLOTHING_CONFIG } from '../shared/config';
 import { CLOTHING_INTERACTIONS } from '../shared/events';
-import { CLOTHING_DLC_INFO, IClothingStore } from '../shared/interfaces';
+import { CLOTHING_DLC_INFO, IClothingStore, IClothingStorePage } from '../shared/interfaces';
 import { ComponentVueInfo } from '../shared/types';
 import { ClothingInfo } from '@AthenaShared/utility/clothing';
 
@@ -30,7 +30,7 @@ const CAMERA_POSITIONS = [
     { zpos: -0.09999999999999902, fov: 45 }, // Bracelet
 ];
 
-let equipment: Array<Item> = [];
+let equipment: Array<ItemEx<ClothingComponent>> = [];
 let appearance: Appearance = null;
 let storeData: IClothingStore = null;
 let isOpen = false;
@@ -39,7 +39,7 @@ let isOpen = false;
  * Do Not Export Internal Only
  */
 class InternalFunctions implements ViewModel {
-    static async open(_storeData: IClothingStore, _appearance: Appearance, _equipment: Array<Item>) {
+    static async open(_storeData: IClothingStore, _appearance: Appearance, _equipment: Array<ItemEx<ClothingComponent>>) {
         if (AthenaClient.webview.isAnyMenuOpen(true)) {
             return;
         }
@@ -159,13 +159,36 @@ class InternalFunctions implements ViewModel {
         }
     }
 
-    static setEquipment(items: Array<Item>) {
-        const clothingComponents = new Array(11).fill(null);
+    static setEquipment(items: Array<ItemEx<ClothingComponent>>) {
+        const pages: Array<IClothingStorePage> = new Array(11).fill(null);
         native.clearAllPedProps(PedCharacter.get(), 0);
 
         if (items && Array.isArray(items)) {
             for (let i = 0; i < items.length; i++) {
-                clothingComponents[items[i].slot] = items[i].data;
+                //Put component into correct page
+                if (pages[items[i].data.id]) {
+                    if (pages[items[i].data.id].ids) {
+                        pages[items[i].data.id].ids.push(items[i].data.id);
+                    } else {
+                        pages[items[i].data.id].ids = [items[i].data.id];
+                    }
+                    if (pages[items[i].data.id].drawables) {
+                        pages[items[i].data.id].drawables.push(items[i].data.drawable);
+                    } else {
+                        pages[items[i].data.id].drawables = [items[i].data.drawable];
+                    }
+                    if (pages[items[i].data.id].textures) {
+                        pages[items[i].data.id].textures.push(items[i].data.texture);
+                    } else {
+                        pages[items[i].data.id].textures = [items[i].data.texture];
+                    }
+                    //TODO - Add palette support in vue
+                    if (pages[items[i].data.id].palettes) {
+                        pages[items[i].data.id].palettes.push(items[i].data.palette);
+                    } else {
+                        pages[items[i].data.id].palettes = [items[i].data.palette];
+                    }
+                }
             }
         }
 
@@ -198,7 +221,8 @@ class InternalFunctions implements ViewModel {
             return;
         }
 
-        InternalFunctions.update(clothingComponents, true);
+        alt.logWarning('Setting clothing components 1');
+        InternalFunctions.update(pages, true);
     }
 
     static controls(value: boolean) {
@@ -232,12 +256,12 @@ class InternalFunctions implements ViewModel {
     static purchase(
         uid: string,
         index: number,
-        component: ClothingComponent,
+        page: IClothingStorePage,
         name: string,
         desc: string,
         noSound = false,
     ) {
-        alt.emitServer(CLOTHING_INTERACTIONS.PURCHASE, uid, index, component, name, desc, noSound);
+        alt.emitServer(CLOTHING_INTERACTIONS.PURCHASE, uid, index, page, name, desc, noSound);
     }
 
     /**
@@ -248,42 +272,43 @@ class InternalFunctions implements ViewModel {
      * @memberof InternalFunctions
      */
     static purchaseAll(components: Array<ComponentVueInfo>) {
+        //TODO Check ComponentVueInfo -> not typesafe. Replace with IClothingStorePage
         alt.emitServer(CLOTHING_INTERACTIONS.PURCHASE_ALL, components);
     }
 
-    static async populate(clothings: Array<ClothingInfo>) {
-        if (typeof clothings === 'string') {
-            clothings = JSON.parse(clothings);
+    static async populate(pages: Array<IClothingStorePage>) {
+        alt.logWarning('Populating Clothing: ' + JSON.stringify(pages));
+        if (typeof pages === 'string') {
+            pages = JSON.parse(pages);
         }
 
-        for (let i = 0; i < clothings.length; i++) {
-            const clothing = clothings[i];
-            const components = clothing.components;
-            if (!components) {
+        for (let i = 0; i < pages.length; i++) {
+            const page = pages[i];
+            if (!page || !page.drawables) {
                 continue;
             }
 
-            for (let index = 0; index < components.length; index++) {
-                const component = components[index];
-                const id = component.id;
-                let value = component.drawable;
-                let textureValue = component.texture;
+            for (let index = 0; index < page.drawables.length; index++) {               
+                const id = page.ids[index];
+                let value = page.drawables[index];
+                let textureValue = page.textures[index];
+                const isProp = page.isProp[index];
 
                 let maxTextures = 0;
                 let maxDrawables = 0;
 
-                if (component.isProp) {
+                if (isProp) {
                     // Get Current Value of Prop Player is Wearing
                     value = native.getPedPropIndex(PedCharacter.get(), id, 0);
-                    //TODO: Fix this, it's not working.
-                    // if (typeof component.startValue === 'undefined') {
-                    //     component.startValue = value;
-                    // }
+                    
+                    if (typeof page.startValue === 'undefined') {
+                            page.startValue = value;
+                    }
 
-                    component.drawable = value;
+                    page.drawables[index] = value;
 
                     textureValue = native.getPedPropTextureIndex(PedCharacter.get(), id);
-                    component.texture = textureValue;
+                    page.textures[index] = textureValue;
 
                     maxDrawables =
                         CLOTHING_CONFIG.MAXIMUM_PROP_VALUES[appearance.sex][id] +
@@ -295,15 +320,14 @@ class InternalFunctions implements ViewModel {
                     alt.log('populate!!!!: ' + value);
                     value = native.getPedDrawableVariation(PedCharacter.get(), id);
                     alt.log('populate!!!!: ' + value);
-                    component.drawable = value;
+                    page.drawables[index] = value;
 
-                    //TODO: Fix this, it's not working.
-                    // if (typeof component.startValue === 'undefined') {
-                    //     component.startValue = value;
-                    // }
+                    if (typeof page.startValue === 'undefined') {
+                        page.startValue = value;
+                    }
 
                     textureValue = native.getPedTextureVariation(PedCharacter.get(), id);
-                    component.texture = textureValue;
+                    page.textures[index] = textureValue;
 
                     maxDrawables =
                         CLOTHING_CONFIG.MAXIMUM_COMPONENT_VALUES[appearance.sex][id] +
@@ -312,72 +336,62 @@ class InternalFunctions implements ViewModel {
                     maxTextures = native.getNumberOfPedTextureVariations(PedCharacter.get(), id, value);
                 }
 
-                //TODO: Fix this, it's not working.
-                // component.maxDrawables[index] = maxDrawables;
-                // component.maxTextures[index] = maxTextures;
+                page.maxDrawables[index] = maxDrawables;
+                page.maxTextures[index] = maxTextures;
+                
             }
         }
 
-        AthenaClient.webview.emit(CLOTHING_INTERACTIONS.PROPAGATE, clothings);
+        AthenaClient.webview.emit(CLOTHING_INTERACTIONS.PROPAGATE, pages);
     }
 
-    static async update(clothings: Array<ClothingInfo>, justSync = false, populateData = false) {
-        if (typeof clothings === 'string') {
-            clothings = JSON.parse(clothings);
+    static async update(pages: Array<IClothingStorePage>, justSync = false, populateData = false) {
+        alt.log('update pages: ' + JSON.stringify(pages));
+        if (typeof pages === 'string') {
+            pages = JSON.parse(pages);
         }
 
-        alt.log('components!!!!: ' + JSON.stringify(clothings));
-
-        for (let i = 0; i < clothings.length; i++) {
-            const clothing = clothings[i];
-            if (!clothing) {
+        for (let i = 0; i < pages.length; i++) {
+            const page = pages[i];
+            if (!page || !page.drawables) {
                 continue;
             }
 
-            for (let index = 0; index < clothing.components.length; index++) {
-                const component = clothing.components[index];
+            for (let index = 0; index < page.drawables.length; index++) {
+                const id = page.ids[index];
+                let drawable = page.drawables[index];
+                const texture = page.textures[index];
+                const isProp = page.isProp;
 
-                //FIXME: remove test case
-                // if (id === 5 && drawable === 111) {
-                //     component.dlcHashes = ['mp_m_rucksack'];
-                //     drawable = 1;
-                //     populateData = false;
-                // }
-
-                if (component.dlc) {
-                    alt.log('DLC HASH!!!! Index : ' + index);
-                    alt.log('DLC HASH!!!! : ' + JSON.stringify(component.dlc));
-                    let dlc = component.dlc;
+                if (page.dlcs && page.dlcs.length >= 1) {
+                    alt.log('DLC HASH!!!! : ' + JSON.stringify(page.dlcs));
+                    let dlc = page.dlcs[index];
                     if (typeof dlc === 'string') {
                         dlc = alt.hash(dlc);
                     }
 
-                    if (component.isProp) {
-                        if (component.drawable <= -1) {
-                            native.clearPedProp(PedCharacter.get(), component.id, 0);
-                            continue;
+                    if (isProp) {
+                        if (drawable <= -1) {
+                            native.clearPedProp(PedCharacter.get(), id, 0);
+                        } else {
+                            alt.setPedDlcProp(PedCharacter.get(), dlc, id, drawable, texture);
                         }
-
-                        alt.setPedDlcProp(PedCharacter.get(), dlc, component.id, component.drawable, component.texture);
-                        continue;
-                    }
-
-                    alt.log('DLC HASH!!!! setPedDlcClothes : ' + dlc + ' ' + component.drawable);
-                    alt.setPedDlcClothes(PedCharacter.get(), dlc, component.id, component.drawable, component.texture, 0);
-                    continue;
+                    } else {
+                        alt.log('DLC HASH!!!! setPedDlcClothes : ' + dlc + ' ' + drawable);
+                        alt.setPedDlcClothes(PedCharacter.get(), dlc, id, drawable, texture, 0);
+                    }               
                 }
 
-                if (component.isProp) {
-                    if (component.drawable <= -1) {
-                        native.clearPedProp(PedCharacter.get(), component.id,0);
-                        continue;
+                if (isProp) {
+                    if (drawable <= -1) {
+                        native.clearPedProp(PedCharacter.get(), id, 0);
+                    } else {
+                        native.setPedPropIndex(PedCharacter.get(), id, drawable, texture, true,0);
                     }
-
-                    native.setPedPropIndex(PedCharacter.get(), component.id, component.drawable, component.texture, true,0);
                 } else {
-                    native.setPedComponentVariation(PedCharacter.get(), component.id, component.drawable, component.texture, 0);
-                }
-            }
+                    native.setPedComponentVariation(PedCharacter.get(), id, drawable, texture, 0);
+                }  
+            }          
         }
 
         if (justSync) {
@@ -391,7 +405,7 @@ class InternalFunctions implements ViewModel {
             return;
         }
 
-        InternalFunctions.populate(clothings);
+        InternalFunctions.populate(pages);
     }
 }
 
