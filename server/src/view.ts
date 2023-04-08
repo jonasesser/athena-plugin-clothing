@@ -360,17 +360,12 @@ export class ClothingFunctions {
         const playerData = Athena.document.character.get(player);
         if (!playerData) return false;
 
-        const shop = clothingStoreList[index];
-        
-        //TODO what is internalID? index of shop page!
-        //const id: number = component.internalID;
-        const id: number = equipmentSlot;
+        const shop = clothingStoreList[index];        
+        const id: number = page.internalID;
 
         let totalCost: number = 0;
-        for (let i = 0; i < component.length; i++) {
-            const component = components[i];
-            const drawable: number = component.drawable;
-            const id: number = component.id;
+        for (let i = 0; i < page.drawables.length; i++) {
+            const drawable: number = page.drawables[i];
 
             // Price based on component id in individual shop.
             if (shop.clothingPrices[id]) {
@@ -401,20 +396,18 @@ export class ClothingFunctions {
             }
         }
 
-        // TODO Remove unncessary information
-        // delete component.internalID;
+        // delete page.internalID;
 
-        const newItem = deepCloneObject<ItemEx<ClothingInfo>>(wearableRef);
-        newItem.name = name;
-        newItem.description = desc;
-
+        // const newItem = deepCloneObject<ItemEx<ClothingInfo>>(wearableRef);
+        // newItem.name = name;
+        // newItem.description = desc;
         //TODO: this is a hack, fix it
-        newItem.data = clothing;
-        newItem.data.sex = playerData.appearance.sex;
+        //newItem.data = clothing;
+        // newItem.data.sex = playerData.appearance.sex;
         // newItem.data.dlcHashes = [];
-        newItem.slot = equipmentSlot;
-        newItem.icon = icons[equipmentSlot];
-        newItem.quantity = 1;
+        // newItem.slot = equipmentSlot;
+        // newItem.icon = icons[equipmentSlot];
+        // newItem.quantity = 1;
         // newItem.equipment = equipmentSlot;
 
         // Athena.player.sync.appearance(player, Characters[player.id][index]);
@@ -477,6 +470,16 @@ export class ClothingFunctions {
         // if (!noSound) {
         //     Athena.player.emit.sound2D(player, 'item_purchase');
         // }
+
+        // TODO: Check ID, what is if multiple ids?
+        // TODO: Item Name
+        const storableItem = Athena.systems.inventory.clothing.outfitFromPlayer(player, [{ id: page.ids[0] }]);
+        const result = await Athena.systems.inventory.manager.add(storableItem, playerData.inventory, 'inventory');
+        if (typeof result === 'undefined') {
+            return false;
+        }
+
+        await Athena.document.character.set(player, 'inventory', result);
 
         return true;
     }
