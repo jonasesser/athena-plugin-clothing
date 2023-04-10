@@ -2,19 +2,15 @@ import * as alt from 'alt-server';
 import * as Athena from '@AthenaServer/api';
 import { Interaction } from '../../../../shared/interfaces/interaction';
 import { ClothingComponent, Item, ItemEx } from '../../../../shared/interfaces/item';
-import { LOCALE_KEYS } from '../../../../shared/locale/languages/keys';
-import { LocaleController } from '../../../../shared/locale/locale';
 import { deepCloneObject } from '../../../../shared/utility/deepCopy';
 import { CLOTHING_CONFIG } from '../../shared/config';
 import { CLOTHING_STORE_PAGE, DLC_CLOTH_HASH } from '../../shared/enums';
 import { CLOTHING_INTERACTIONS } from '../../shared/events';
 import { CLOTHING_DLC_INFO, IClothingStore, IClothingStorePage } from '../../shared/interfaces';
-import { ComponentVueInfo } from '../../shared/types';
 import clothingStores from './stores';
 import { PolygonShape } from '@AthenaServer/extensions/extColshape';
 import { sha256 } from '@AthenaServer/utility/hash';
 import { Blip } from '@AthenaShared/interfaces/blip';
-import { ClothingInfo } from '@AthenaShared/utility/clothing';
 
 // Do not change order
 const icons = [
@@ -137,6 +133,7 @@ export class ClothingFunctions {
 
         interaction.callback = (player: alt.Player) => {
             const playerData = Athena.document.character.get(player);
+            playerData._id
             if (!playerData) return;
 
             const data = ClothingFunctions.getClothingStoreData(store.uid);
@@ -213,8 +210,7 @@ export class ClothingFunctions {
      * @memberof ClothingFunctions
      */
     static exit(player: alt.Player) {
-        //TODO: sync still needed?
-        // Athena.player.sync.inventory(player);
+        Athena.systems.inventory.clothing.update(player);
     }
 
     /**
@@ -297,6 +293,66 @@ export class ClothingFunctions {
         return null;
     }
 
+    static async update(player: alt.Player, pages: Array<IClothingStorePage>, justSync = false, populateData = false) {
+        alt.logWarning('update serverside: ' + JSON.stringify(pages));
+        for (let i = 0; i < pages.length; i++) {
+            const page = pages[i];
+            if (!page || !page.drawables) {
+                continue;
+            }
+
+            for (let index = 0; index < page.drawables.length; index++) {
+                alt.logWarning('update serverside: ' + JSON.stringify(page));
+                const id = page.ids[index];
+                let drawable = page.drawables[index];
+                const texture = page.textures[index];
+                const isProp = page.isProp;
+                let palette = 0;
+                if(page.palettes && page.palettes.length >= index){
+                    palette = page.palettes[index];
+                }
+
+                if (page.dlcs && page.dlcs.length >= 1) {
+                    let dlc = page.dlcs[index];
+                    if (typeof dlc === 'string') {
+                        dlc = alt.hash(dlc);
+                    }
+                    if (isProp) {
+                        if (drawable <= -1) {
+                            player.clearProp(id);
+                        } else {
+                            player.setDlcProp(dlc, id, drawable, texture);
+                        }
+                    } else {
+                        player.setDlcClothes(dlc, id, drawable, texture, palette);
+                    }               
+                } else {
+                    if (isProp) {
+                        if (drawable <= -1) {
+                            player.clearProp(id);
+                        } else {
+                            player.setProp(id, drawable, texture);
+                        }
+                    } else {
+                        player.setClothes(id, drawable, texture, palette);
+                    }  
+                }
+            }          
+        }
+
+        // const result = await Athena.systems.inventory.manager.get(storableItem, data.inventory, 'inventory');
+        // const result = await Athena.systems.inventory.manager.add(storableItem, data.inventory, 'inventory');
+        // if (typeof result === 'undefined') {
+        //     return;
+        // }
+
+        // await Athena.document.character.set(player, 'inventory', result);
+
+        if (justSync) {
+            return;
+        }
+    }
+
     /**
      * Purchases all components sent up from the client-side.
      *
@@ -305,19 +361,17 @@ export class ClothingFunctions {
      * @param {Array<ComponentVueInfo>} components
      * @memberof ClothingFunctions
      */
-    static async purchaseAll(player: alt.Player, components: Array<ComponentVueInfo>) {
-        if (components.length <= 0) {
+    static async purchaseAll(player: alt.Player, shopUID: string,
+        equipmentSlot: number, pages: Array<IClothingStorePage>) {
+        if (pages.length <= 0) {
             return;
         }
 
-        for (const comp of components) {
+        for (const page of pages) {
             const result = await ClothingFunctions.purchase(
                 player,
-                comp.uid,
-                comp.index,
-                comp.componentData,
-                comp.pageName,
-                comp.name,
+                shopUID,
+                page,
                 true,
             );
 
@@ -345,10 +399,7 @@ export class ClothingFunctions {
     static async purchase(
         player: alt.Player,
         shopUID: string,
-        equipmentSlot: number,
         page: IClothingStorePage,
-        name: string,
-        desc: string,
         noSound = false,
     ): Promise<boolean> {
         const index = clothingStoreList.findIndex((x) => x.uid === shopUID);
@@ -360,17 +411,35 @@ export class ClothingFunctions {
         const playerData = Athena.document.character.get(player);
         if (!playerData) return false;
 
-        const shop = clothingStoreList[index];        
-        const id: number = page.internalID;
-
+        const shop = clothingStoreList[index];
+        let clothes: Array<ClothingComponent> = [];
         let totalCost: number = 0;
         for (let i = 0; i < page.drawables.length; i++) {
+            const id: number = page.ids[i];
             const drawable: number = page.drawables[i];
+            const texture: number = page.textures[i];
+            const isProp: boolean = page.isProp;
+
+            const dlcInfo = ClothingFunctions.getDlcHash(
+                player,
+                id,
+                drawable,
+                texture,
+                isProp,
+            );
+
+            if(dlcInfo && (typeof dlcInfo.dlcName === "number")) 
+            {
+                clothes.push({ id: id, drawable: dlcInfo.drawable, texture: dlcInfo.texture, dlc: dlcInfo.dlcName });
+            } else {
+                clothes.push({ id: id, drawable: dlcInfo.drawable, texture: dlcInfo.texture, dlc: 0 });
+            }
+            
 
             // Price based on component id in individual shop.
             if (shop.clothingPrices[id]) {
                 const componentInfo = shop.clothingPrices[id].find((item) => {
-                    if (item.id === drawable) {
+                    if (item.id === id) {
                         return true;
                     }
 
@@ -396,41 +465,15 @@ export class ClothingFunctions {
             }
         }
 
-        // delete page.internalID;
-
-        // const newItem = deepCloneObject<ItemEx<ClothingInfo>>(wearableRef);
-        // newItem.name = name;
-        // newItem.description = desc;
-        //TODO: this is a hack, fix it
-        //newItem.data = clothing;
-        // newItem.data.sex = playerData.appearance.sex;
-        // newItem.data.dlcHashes = [];
-        // newItem.slot = equipmentSlot;
-        // newItem.icon = icons[equipmentSlot];
-        // newItem.quantity = 1;
-        // newItem.equipment = equipmentSlot;
-
-        // Athena.player.sync.appearance(player, Characters[player.id][index]);
-        // Athena.systems.inventory.clothing.update(player, Characters[player.id][index]);
-                //server side
-        // const storableItem = Athena.systems.inventory.clothing....
-        // Athena.player.sync.singleEquipment(player, newItem.data as ClothingComponent);
-
         await alt.Utils.wait(500);
 
-        // for (let i = 0; i < component.drawables.length; i++) {
-        //     const dlcInfo = ClothingFunctions.getDlcHash(
-        //         player,
-        //         component.ids[i],
-        //         component.drawables[i],
-        //         component.textures[i],
-        //         component.isProp,
-        //     );
+        const storableItem = Athena.systems.inventory.clothing.outfitFromPlayer(player, clothes);
+        const result = await Athena.systems.inventory.manager.add(storableItem, playerData.inventory, 'inventory');
+        if (typeof result === 'undefined') {
+            return false;
+        }
 
-        //     newItem.data.dlcHashes.push(dlcInfo.dlcName);
-        //     newItem.data.drawables[i] = dlcInfo.drawable;
-        //     newItem.data.textures[i] = dlcInfo.texture;
-        // }
+        await Athena.document.character.set(player, 'inventory', result);
 
         // let didGetAdded = false;
 
@@ -467,19 +510,10 @@ export class ClothingFunctions {
         // Athena.player.sync.inventory(player);
         // Athena.player.sync.equipment(player, player.data.equipment as Item[], player.data.appearance.sex === 1);
 
-        // if (!noSound) {
-        //     Athena.player.emit.sound2D(player, 'item_purchase');
-        // }
 
-        // TODO: Check ID, what is if multiple ids?
-        // TODO: Item Name
-        const storableItem = Athena.systems.inventory.clothing.outfitFromPlayer(player, [{ id: page.ids[0] }]);
-        const result = await Athena.systems.inventory.manager.add(storableItem, playerData.inventory, 'inventory');
-        if (typeof result === 'undefined') {
-            return false;
-        }
-
-        await Athena.document.character.set(player, 'inventory', result);
+        if (!noSound) {
+            Athena.player.emit.sound2D(player, 'item_purchase');
+        }       
 
         return true;
     }
@@ -510,3 +544,4 @@ export class ClothingFunctions {
 alt.onClient(CLOTHING_INTERACTIONS.EXIT, ClothingFunctions.exit);
 alt.onClient(CLOTHING_INTERACTIONS.PURCHASE, ClothingFunctions.purchase);
 alt.onClient(CLOTHING_INTERACTIONS.PURCHASE_ALL, ClothingFunctions.purchaseAll);
+alt.onClient(CLOTHING_INTERACTIONS.UPDATE, ClothingFunctions.update);

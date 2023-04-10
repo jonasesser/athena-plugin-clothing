@@ -14,68 +14,6 @@
                         <span class="green--text">{{ getLocaleText('LABEL_INSTRUCTION_HEADER') }}</span>
                     </Toolbar>
                 </template>
-                <template v-slot:content>
-                    <div class="subtitle-2 mb-3 mt-1">{{ getLocaleText('LABEL_INSTRUCTION') }}</div>
-                    <Input
-                        :label="getLocaleText('LABEL_NAME')"
-                        :stack="true"
-                        :onInput="(text) => inputChange('name', text)"
-                        :validateCallback="(valid) => setValidityProp('name', valid)"
-                        :value="name"
-                        :rules="[
-                            (text) => {
-                                return new RegExp(/^[a-zA-Z ]+$/gm).test(text)
-                                    ? null
-                                    : 'Name cannot include special characters';
-                            },
-                            (text) => {
-                                return text.length >= 4 ? null : 'Name must be at least 4 characters';
-                            },
-                            (text) => {
-                                return text.length <= 16 ? null : 'Name must be less than 16 characters';
-                            },
-                        ]"
-                        :placeholder="getLocaleText('LABEL_HELPER_NAME')"
-                        class="mb-3"
-                    />
-                    <Input
-                        :label="getLocaleText('LABEL_DESC')"
-                        :stack="true"
-                        :onInput="(text) => inputChange('desc', text)"
-                        :validateCallback="(valid) => setValidityProp('desc', valid)"
-                        :value="desc"
-                        :rules="[
-                            (text) => {
-                                return new RegExp(/^[a-zA-Z ]+$/gm).test(text)
-                                    ? null
-                                    : 'Name cannot include special characters';
-                            },
-                            (text) => {
-                                return text.length >= 4 ? null : 'Name must be at least 4 characters';
-                            },
-                            (text) => {
-                                return text.length <= 16 ? null : 'Name must be less than 16 characters';
-                            },
-                        ]"
-                        :placeholder="getLocaleText('LABEL_HELPER_DESC')"
-                        class="mb-3"
-                    />
-                    <div class="split split-full">
-                        <Button class="mt-2 fill-half-width" color="red" @click="togglePurchaseInterface(false)">
-                            {{ getLocaleText('LABEL_CANCEL') }}
-                        </Button>
-                        <template v-if="allValid">
-                            <Button class="ml-4 mt-2 fill-half-width" color="green" @click="purchaseComponent">
-                                {{ getLocaleText('LABEL_PURCHASE') }}
-                            </Button>
-                        </template>
-                        <template v-else>
-                            <Button class="ml-4 mt-2 fill-half-width" color="grey" :disable="true">
-                                {{ getLocaleText('LABEL_PURCHASE') }}
-                            </Button>
-                        </template>
-                    </div>
-                </template>
             </Frame>
         </Modal>
         <!-- Right Panel -->
@@ -100,7 +38,7 @@
                         <Button
                             class="smooth-button fill-full-width mr-3"
                             color="green"
-                            @click="togglePurchaseInterface(true)"
+                            @click="purchaseComponent()"
                         >
                             <span class="green--text">{{ getPurchaseText }}</span>
                         </Button>
@@ -136,8 +74,6 @@ import { defineComponent, defineAsyncComponent } from 'vue';
 import { EXAMPLE_CLOTHING_DATA } from './utility/exampleData';
 import { DEFAULT_CLOTHING_STORE } from './utility/defaultData';
 import { LOCALE_CLOTHING } from '../shared/locales';
-import { ComponentVueInfo } from '../shared/types';
-import { ClothingInfo, ClothingComponent } from '@AthenaShared/interfaces/item';
 import { IClothingStorePage } from '../shared/interfaces';
 
 const ComponentName = 'Clothing';
@@ -167,8 +103,6 @@ export default defineComponent({
             pages: [] as Array<IClothingStorePage>,
             // Old dog shit
             showDialog: false,
-            name: '',
-            desc: '',
             labels: [],
             allValid: false,
             validity: {
@@ -385,7 +319,7 @@ export default defineComponent({
                 return;
             }
 
-            const components: Array<ComponentVueInfo> = [];
+            const pages: Array<IClothingStorePage> = [];
 
             for (let i = 0; i < this.pages.length; i++) {
                 const page = this.pages[i];
@@ -402,28 +336,14 @@ export default defineComponent({
                     continue;
                 }
 
-                const componentData = JSON.parse(JSON.stringify(page));
-                delete componentData.startValue;
-                delete componentData.maxDrawables;
-                delete componentData.maxTextures;
-                delete componentData.name;
-                delete componentData.pageName;
-                delete componentData.names;
-
-                components.push({
-                    uid: this.storeData.uid,
-                    index: i,
-                    componentData,
-                    pageName: page.pageName,
-                    name: '',
-                });
+                pages.push(page);
             }
 
             if (!('alt' in window)) {
                 return;
             }
 
-            WebViewEvents.emitClient(CLOTHING_INTERACTIONS.PURCHASE_ALL, components);
+            WebViewEvents.emitClient(CLOTHING_INTERACTIONS.PURCHASE_ALL, this.storeData.uid, pages);
         },
         isComponentAvailableAll() {
             let allAvailable = true;
@@ -516,15 +436,6 @@ export default defineComponent({
 
             this.allValid = allValid;
         },
-        togglePurchaseInterface(value: boolean) {
-            this.showDialog = value;
-
-            this.name = '';
-            this.desc = '';
-
-            WebViewEvents.emitClient(CLOTHING_INTERACTIONS.DISABLE_CONTROLS, value);
-        
-        },
         getData(dataName: string, index: number) {
             return this.pages[this.pageIndex][dataName][index];
         },
@@ -533,7 +444,7 @@ export default defineComponent({
                 return;
             }
 
-            alt.emit(CLOTHING_INTERACTIONS.PAGE_UPDATE, this.pageIndex);
+            WebViewEvents.emitClient(CLOTHING_INTERACTIONS.PAGE_UPDATE, this.pageIndex);
         },
         handlePress(e) {
             if (e.keyCode !== 27) {
@@ -558,20 +469,11 @@ export default defineComponent({
             delete pageData.pageName;
             delete pageData.names;
 
-            if (!('alt' in window)) {
-                this.togglePurchaseInterface(false);
-                return;
-            }
-
             WebViewEvents.emitClient(
                 CLOTHING_INTERACTIONS.PURCHASE,
                 this.storeData.uid,
-                this.pageIndex,
                 pageData,
-                this.name,
-                this.desc,
             );
-            this.togglePurchaseInterface(false);
         },
         setData(data) {
             this.storeData = data;
