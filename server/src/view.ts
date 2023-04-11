@@ -354,38 +354,6 @@ export class ClothingFunctions {
     }
 
     /**
-     * Purchases all components sent up from the client-side.
-     *
-     * @static
-     * @param {alt.Player} player
-     * @param {Array<ComponentVueInfo>} components
-     * @memberof ClothingFunctions
-     */
-    static async purchaseAll(player: alt.Player, shopUID: string,
-        equipmentSlot: number, pages: Array<IClothingStorePage>) {
-        if (pages.length <= 0) {
-            return;
-        }
-
-        for (const page of pages) {
-            const result = await ClothingFunctions.purchase(
-                player,
-                shopUID,
-                page,
-                true,
-            );
-
-            Athena.player.emit.soundFrontend(
-                player,
-                result ? 'Hack_Success' : 'Hack_Failed',
-                'DLC_HEIST_BIOLAB_PREP_HACKING_SOUNDS',
-            );
-        }
-
-        Athena.player.emit.sound2D(player, 'item_purchase');
-    }
-
-    /**
      * How clothing purchases are handled.
      * @static
      * @param {alt.Player} player
@@ -399,9 +367,13 @@ export class ClothingFunctions {
     static async purchase(
         player: alt.Player,
         shopUID: string,
-        page: IClothingStorePage,
+        pages: Array<IClothingStorePage>,
         noSound = false,
     ): Promise<boolean> {
+        if (pages.length <= 0) {
+            return false;
+        }
+
         const index = clothingStoreList.findIndex((x) => x.uid === shopUID);
         if (index <= -1) {
             Athena.player.emit.sound2D(player, 'item_error');
@@ -414,47 +386,50 @@ export class ClothingFunctions {
         const shop = clothingStoreList[index];
         let clothes: Array<ClothingComponent> = [];
         let totalCost: number = 0;
-        for (let i = 0; i < page.drawables.length; i++) {
-            const id: number = page.ids[i];
-            const drawable: number = page.drawables[i];
-            const texture: number = page.textures[i];
-            const isProp: boolean = page.isProp;
 
-            const dlcInfo = ClothingFunctions.getDlcHash(
-                player,
-                id,
-                drawable,
-                texture,
-                isProp,
-            );
+        for (const page of pages) {
+            for (let i = 0; i < page.drawables.length; i++) {
+                const id: number = page.ids[i];
+                const drawable: number = page.drawables[i];
+                const texture: number = page.textures[i];
+                const isProp: boolean = page.isProp;
 
-            if(dlcInfo && (typeof dlcInfo.dlcName === "number")) 
-            {
-                clothes.push({ id: id, drawable: dlcInfo.drawable, texture: dlcInfo.texture, dlc: dlcInfo.dlcName });
-            } else {
-                clothes.push({ id: id, drawable: dlcInfo.drawable, texture: dlcInfo.texture, dlc: 0 });
-            }
-            
+                const dlcInfo = ClothingFunctions.getDlcHash(
+                    player,
+                    id,
+                    drawable,
+                    texture,
+                    isProp,
+                );
 
-            // Price based on component id in individual shop.
-            if (shop.clothingPrices[id]) {
-                const componentInfo = shop.clothingPrices[id].find((item) => {
-                    if (item.id === id) {
-                        return true;
-                    }
-
-                    return false;
-                });
-
-                if (componentInfo && componentInfo.price) {
-                    totalCost += componentInfo.price;
-                    continue;
+                if(dlcInfo && (typeof dlcInfo.dlcName === "number")) 
+                {
+                    clothes.push({ id: id, drawable: dlcInfo.drawable, texture: dlcInfo.texture, dlc: dlcInfo.dlcName });
+                } else {
+                    clothes.push({ id: id, drawable: dlcInfo.drawable, texture: dlcInfo.texture, dlc: 0 });
                 }
-            }
+                
 
-            // Get individual page cost for all items if component has no price.
-            if (shop.pagePrices[id]) {
-                totalCost += shop.pagePrices[id];
+                // Price based on component id in individual shop.
+                if (shop.clothingPrices[id]) {
+                    const componentInfo = shop.clothingPrices[id].find((item) => {
+                        if (item.id === id) {
+                            return true;
+                        }
+
+                        return false;
+                    });
+
+                    if (componentInfo && componentInfo.price) {
+                        totalCost += componentInfo.price;
+                        continue;
+                    }
+                }
+
+                // Get individual page cost for all items if component has no price.
+                if (shop.pagePrices[id]) {
+                    totalCost += shop.pagePrices[id];
+                }
             }
         }
 
@@ -474,42 +449,6 @@ export class ClothingFunctions {
         }
 
         await Athena.document.character.set(player, 'inventory', result);
-
-        // let didGetAdded = false;
-
-        // if (Athena.player.inventory.isEquipmentSlotFree(player, equipmentSlot)) {
-        //     didGetAdded = Athena.player.inventory.equipmentAdd(player, newItem, equipmentSlot);
-        // } else {
-        //     const openSlot = Athena.player.inventory.getFreeInventorySlot(player);
-        //     if (!openSlot) {
-        //         Athena.player.emit.sound2D(player, 'item_error');
-        //         return false;
-        //     }
-
-        //     Athena.player.emit.message(player, LocaleController.get(LOCALE_KEYS.CLOTHING_ITEM_IN_INVENTORY));
-        //     didGetAdded = Athena.player.inventory.inventoryAdd(player, newItem, openSlot.slot);
-        // }
-
-        // if (!didGetAdded) {
-        //     Athena.player.emit.sound2D(player, 'item_error');
-        //     return false;
-        // }
-
-        // if (totalCost >= 1) {
-        //     if (!Athena.player.currency.subAllCurrencies(player, totalCost)) {
-        //         Athena.player.emit.sound2D(player, 'item_error');
-        //         return false;
-        //     }
-        // }
-
-        // await Athena.state.setBulk(
-        //     player,
-        //     { inventory: player.data.inventory, equipment: player.data.equipment },
-        //     true,
-        // );
-        // Athena.player.sync.inventory(player);
-        // Athena.player.sync.equipment(player, player.data.equipment as Item[], player.data.appearance.sex === 1);
-
 
         if (!noSound) {
             Athena.player.emit.sound2D(player, 'item_purchase');
@@ -543,5 +482,4 @@ export class ClothingFunctions {
 
 alt.onClient(CLOTHING_INTERACTIONS.EXIT, ClothingFunctions.exit);
 alt.onClient(CLOTHING_INTERACTIONS.PURCHASE, ClothingFunctions.purchase);
-alt.onClient(CLOTHING_INTERACTIONS.PURCHASE_ALL, ClothingFunctions.purchaseAll);
 alt.onClient(CLOTHING_INTERACTIONS.UPDATE, ClothingFunctions.update);

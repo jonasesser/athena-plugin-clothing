@@ -313,6 +313,21 @@ export default defineComponent({
             }
 
             return price;
+        },        
+        purchaseComponent() {
+            const pageData = JSON.parse(JSON.stringify(this.pages[this.pageIndex]));
+            delete pageData.startValue;
+            delete pageData.maxDrawables;
+            delete pageData.maxTextures;
+            delete pageData.name;
+            delete pageData.pageName;
+            delete pageData.names;
+
+            WebViewEvents.emitClient(
+                CLOTHING_INTERACTIONS.PURCHASE,
+                this.storeData.uid,
+                [pageData],
+            );
         },
         purchaseAll() {
             if (!this.pages || this.pages.length <= 0) {
@@ -322,28 +337,30 @@ export default defineComponent({
             const pages: Array<IClothingStorePage> = [];
 
             for (let i = 0; i < this.pages.length; i++) {
-                const page = this.pages[i];
+                const pageData = JSON.parse(JSON.stringify(this.pages[i]));
 
-                if (page.startValue === 'undefined' || page.startValue === null) {
+                if (pageData.startValue === 'undefined' || pageData.startValue === null) {
                     continue;
                 }
 
-                if (page.drawables[0] === page.startValue) {
+                if (pageData.drawables[0] === pageData.startValue) {
                     continue;
                 }
 
-                if (page.isProp && page.drawables[0] === -1) {
+                if (pageData.isProp && pageData.drawables[0] === -1) {
                     continue;
                 }
 
-                pages.push(page);
+                delete pageData.startValue;
+                delete pageData.maxDrawables;
+                delete pageData.maxTextures;
+                delete pageData.name;
+                delete pageData.pageName;
+                delete pageData.names;
+                pages.push(pageData);
             }
 
-            if (!('alt' in window)) {
-                return;
-            }
-
-            WebViewEvents.emitClient(CLOTHING_INTERACTIONS.PURCHASE_ALL, this.storeData.uid, pages);
+            WebViewEvents.emitClient(CLOTHING_INTERACTIONS.PURCHASE, this.storeData.uid, pages);
         },
         isComponentAvailableAll() {
             let allAvailable = true;
@@ -459,21 +476,6 @@ export default defineComponent({
             }
 
             WebViewEvents.emitClose();
-        },
-        purchaseComponent() {
-            const pageData = JSON.parse(JSON.stringify(this.pages[this.pageIndex]));
-            delete pageData.startValue;
-            delete pageData.maxDrawables;
-            delete pageData.maxTextures;
-            delete pageData.name;
-            delete pageData.pageName;
-            delete pageData.names;
-
-            WebViewEvents.emitClient(
-                CLOTHING_INTERACTIONS.PURCHASE,
-                this.storeData.uid,
-                pageData,
-            );
         },
         setData(data) {
             this.storeData = data;

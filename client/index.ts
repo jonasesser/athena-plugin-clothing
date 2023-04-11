@@ -53,24 +53,10 @@ class InternalFunctions implements ViewModel {
         AthenaClient.webview.on(CLOTHING_INTERACTIONS.POPULATE, InternalFunctions.populate);
         AthenaClient.webview.on(CLOTHING_INTERACTIONS.DISABLE_CONTROLS, InternalFunctions.controls);
         AthenaClient.webview.on(CLOTHING_INTERACTIONS.PAGE_UPDATE, InternalFunctions.pageUpdate);
-        AthenaClient.webview.on(CLOTHING_INTERACTIONS.PURCHASE_ALL, InternalFunctions.purchaseAll);
 
         native.doScreenFadeOut(100);
-
-        // await PedCharacter.destroy();
         
         await alt.Utils.wait(100);
-
-        // native.setEntityAlpha(alt.Player.local.scriptID, 0, false);
-
-        // await PedCharacter.create(
-        //     appearance.sex === 1 ? true : false,
-        //     alt.Player.local.pos,
-        //     native.getEntityHeading(alt.Player.local.scriptID),
-        // );
-
-        // await PedCharacter.apply(appearance);
-        // await alt.Utils.wait(100);
         
         if (AthenaClient.camera.pedEdit.exists()) {
              await AthenaClient.camera.pedEdit.destroy();
@@ -109,7 +95,6 @@ class InternalFunctions implements ViewModel {
         await alt.Utils.wait(100);
 
         AthenaClient.camera.pedEdit.destroy();
-        // PedCharacter.destroy();
 
         alt.toggleGameControls(true);
         AthenaClient.webview.setOverlaysVisible(true);
@@ -256,22 +241,10 @@ class InternalFunctions implements ViewModel {
      */
     static purchase(
         uid: string,
-        page: IClothingStorePage,
+        pages: Array<IClothingStorePage>,
         noSound = false,
     ) {
-        alt.emitServer(CLOTHING_INTERACTIONS.PURCHASE, uid, page, noSound);
-    }
-
-    /**
-     * Purchases all components from a shop.
-     *
-     * @static
-     * @param {Array<ComponentVueInfo>} components
-     * @memberof InternalFunctions
-     */
-    static purchaseAll(uid: string,
-        pages: Array<IClothingStorePage>,) {
-        alt.emitServer(CLOTHING_INTERACTIONS.PURCHASE_ALL, uid, pages);
+        alt.emitServer(CLOTHING_INTERACTIONS.PURCHASE, uid, pages, noSound);
     }
 
     static async populate(pages: Array<IClothingStorePage>) {
@@ -323,6 +296,7 @@ class InternalFunctions implements ViewModel {
                     // Get Current Value of Component Player is Wearing
                     alt.log('populate!!!!: ' + value);
                     value = native.getPedDrawableVariation(alt.LocalPlayer.local, id);
+                    
                     alt.log('populate!!!!: ' + value);
                     page.drawables[index] = value;
 
