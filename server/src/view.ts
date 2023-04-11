@@ -404,9 +404,9 @@ export class ClothingFunctions {
 
                 if(dlcInfo && (typeof dlcInfo.dlcName === "number")) 
                 {
-                    clothes.push({ id: id, drawable: dlcInfo.drawable, texture: dlcInfo.texture, dlc: dlcInfo.dlcName });
+                    clothes.push({ id: id, drawable: dlcInfo.drawable, texture: dlcInfo.texture, dlc: dlcInfo.dlcName, isProp: isProp });
                 } else {
-                    clothes.push({ id: id, drawable: dlcInfo.drawable, texture: dlcInfo.texture, dlc: 0 });
+                    clothes.push({ id: id, drawable: dlcInfo.drawable, texture: dlcInfo.texture, dlc: 0, isProp: isProp});
                 }
                 
 

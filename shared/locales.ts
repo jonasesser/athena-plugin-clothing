@@ -28,7 +28,7 @@ export const LOCALE_CLOTHING = {
     LABEL_HELPER_NAME: 'Steezy Red Hat',
     LABEL_ALL_PRICE: 'All',
     LABEL_ITEM: 'Item',
-    LABEL_PURCHASE_ALL: 'Buy All',
+    LABEL_PURCHASE_ALL: 'Buy All (Outfit)',
 };
 
 // [LOCALE_KEYS.WEBVIEW_CLOTHING]: {
